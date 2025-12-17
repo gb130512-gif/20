@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>台股成交值即時榜 (前20名)</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 600px; padding: 20px; }
+        h2 { text-align: center; color: #1a73e8; margin-top: 0; }
+        .info { display: flex; justify-content: space-between; font-size: 14px; color: #666; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f9fa; color: #5f6368; font-weight: 600; padding: 12px 8px; border-bottom: 2px solid #eee; text-align: center; }
+        td { padding: 10px 8px; border-bottom: 1px solid #eee; text-align: center; }
+        .stock-name { text-align: left; font-weight: bold; color: #202124; }
+        .value { color: #d93025; font-weight: 500; text-align: right; }
+        .rank { color: #888; font-style: italic; }
+        .loading-bar { height: 3px; background: #eee; width: 100%; position: relative; overflow: hidden; margin-bottom: 10px; }
+        .loading-bar::after { content: ""; position: absolute; left: -50%; height: 100%; width: 50%; background: #1a73e8; animation: loading 1.5s infinite; }
+        @keyframes loading { from { left: -50%; } to { left: 100%; } }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>台股成交值排行榜</h2>
+    <div class="loading-bar" id="loader"></div>
+    <div class="info">
+        <span id="status">正在同步證交所數據...</span>
+        <span id="clock">00:00:00</span>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>名次</th>
+                <th style="text-align: left;">股票</th>
+                <th style="text-align: right;">成交值(億)</th>
+            </tr>
+        </thead>
+        <tbody id="data-list">
+            <!-- 數據會顯示在這裡 -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    async function updateRank() {
+        const loader = document.getElementById('loader');
+        const status = document.getElementById('status');
+        const list = document.getElementById('data-list');
+        const clock = document.getElementById('clock');
+        
+        loader.style.display = 'block';
+        
+        try {
+            // 直接呼叫證交所 OpenAPI
+            const response = await fetch('openapi.twse.com.tw');
+            const data = await response.json();
+            
+            list.innerHTML = '';
+            // 只取前 20 名
+            data.slice(0, 20).forEach(item => {
+                const valueInBillions = (parseFloat(item.TradeValue.replace(/,/g, '')) / 100000000).toFixed(2);
+                const row = `<tr>
+                    <td class="rank">${item.Rank}</td>
+                    <td class="stock-name">${item.Name}<br><small style="color:#999;font-weight:normal">${item.Code}</small></td>
+                    <td class="value">${valueInBillions} 億</td>
+                </tr>`;
+                list.innerHTML += row;
+            });
+            
+            status.innerText = '數據已更新';
+            clock.innerText = new Date().toLocaleTimeString();
+        } catch (e) {
+            status.innerText = '更新失敗，請檢查網路';
+            console.error(e);
+        } finally {
+            loader.style.display = 'none';
+        }
+    }
+
+    // 每 30 秒自動更新一次
+    updateRank();
+    setInterval(updateRank, 30000);
+</script>
+
+</body>
+</html>
